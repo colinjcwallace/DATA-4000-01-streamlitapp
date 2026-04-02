@@ -1,4 +1,4 @@
-# Streamlit Inventory App
+# Streamlit Food Inventory App
 
 ## Student Name
 Colin Wallace
