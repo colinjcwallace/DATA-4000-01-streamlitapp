@@ -25,6 +25,7 @@ def add_item(name, qty, cat):
     supabase.table("inventory").insert(data).execute()
     st.cache_data.clear() # Refresh data
 
+
 # --- UI SECTION ---
 with st.expander("➕ Add New Grocery Item"):
     with st.form("add_form", clear_on_submit=True):
@@ -48,7 +49,17 @@ inventory_data = get_inventory()
 if inventory_data:
     df = pd.DataFrame(inventory_data)
     # Cleaning up display
-    df = df[['item_name', 'quantity', 'category', 'calories_per_unit']]
+    df = df[['item_name', 'quantity', 'category']]
     st.dataframe(df, use_container_width=True)
+    # We display each item with a Delete button
+    for index, row in df.iterrows():
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.write(f"**{row['item_name']}** ({row['quantity']}x) - {row['category']}")
+        with col2:
+            # We use the row['id'] to identify the record to delete
+            if st.button("🗑️", key=f"del_{row['id']}"):
+                supabase.table("inventory").delete().eq("id", row['id']).execute()
+                st.rerun() # Refresh the app to remove the item from view
 else:
     st.info("Your inventory is currently empty.")
