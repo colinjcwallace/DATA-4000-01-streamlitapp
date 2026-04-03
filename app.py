@@ -7,7 +7,7 @@ url: str = st.secrets["SUPABASE_URL"]
 key: str = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(url, key)
 
-st.title("🥗 Food Inventory Pro")
+st.title("Food Inventory Manager")
 
 # --- DATA FUNCTIONS ---
 def get_inventory():
@@ -15,13 +15,12 @@ def get_inventory():
     response = supabase.table("inventory").select("*").execute()
     return response.data
 
-def add_item(name, qty, cat, cal):
+def add_item(name, qty, cat):
     # Insert data into Supabase
     data = {
         "item_name": name,
         "quantity": qty,
         "category": cat,
-        "calories_per_unit": cal
     }
     supabase.table("inventory").insert(data).execute()
     st.cache_data.clear() # Refresh data
@@ -35,11 +34,9 @@ with st.expander("➕ Add New Grocery Item"):
             qty = st.number_input("Quantity", min_value=1)
         with col2:
             cat = st.selectbox("Category", ["Produce", "Dairy", "Meat", "Pantry", "Frozen"])
-            cal = st.number_input("Calories (per unit)", min_value=0)
-        
         if st.form_submit_button("Save to Inventory"):
             if name:
-                add_item(name, qty, cat, cal)
+                add_item(name, qty, cat)
                 st.success(f"Added {name}!")
             else:
                 st.error("Please enter an item name.")
@@ -49,7 +46,6 @@ st.subheader("Current Stock")
 inventory_data = get_inventory()
 
 if inventory_data:
-    import pandas as pd
     df = pd.DataFrame(inventory_data)
     # Cleaning up display
     df = df[['item_name', 'quantity', 'category', 'calories_per_unit']]
