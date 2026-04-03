@@ -25,6 +25,20 @@ def add_item(name, qty, cat):
     supabase.table("inventory").insert(data).execute()
     st.cache_data.clear() # Refresh data
 
+# --- Helper Functions ---
+def update_tags(item_id, current_tags, new_tag=None, remove_tag=None):
+    updated_tags = list(current_tags) if current_tags else []
+    
+    if new_tag and new_tag not in updated_tags:
+        updated_tags.append(new_tag)
+    
+    if remove_tag in updated_tags:
+        updated_tags.remove(remove_tag)
+    
+    # Update Supabase
+    supabase.table("inventory").update({"tags": updated_tags}).eq("id", item_id).execute()
+    st.rerun()
+
 
 # --- UI SECTION ---
 with st.expander("➕ Add New Grocery Item"):
@@ -51,15 +65,27 @@ if inventory_data:
     # Cleaning up display
     df = df[['item_name', 'quantity', 'category']]
     st.dataframe(df, use_container_width=True)
-    # We display each item with a Delete button
-    for index, row in df.iterrows():
-        col1, col2 = st.columns([4, 1])
-        with col1:
-            st.write(f"**{row['item_name']}** ({row['quantity']}x) - {row['category']}")
-        with col2:
-            # We use the row['id'] to identify the record to delete
-            if st.button("🗑️", key=f"del_{row['id']}"):
-                supabase.table("inventory").delete().eq("id", row['id']).execute()
-                st.rerun() # Refresh the app to remove the item from view
+# 1. Create a display string for the dropdown (Name + Category)
+    # This helps if you have "Milk" in both 'Dairy' and 'Pantry'
+    df['display_name'] = df['item_name'] + " (" + df['category'] + ")"
+    
+    # 2. Multiselect for deletion
+    to_delete = st.multiselect(
+        "Select items to remove from inventory:",
+        options=df['display_name'].tolist(),
+        help="Select one or more items to delete permanently."
+    )
+    # 3. Delete Button Logic
+    if to_delete:
+        if st.button("🗑️ Delete Selected Items", type="primary"):
+            # Find the IDs for the selected display names
+            ids_to_del = df[df['display_name'].isin(to_delete)]['id'].tolist()
+            
+            # Execute batch delete in Supabase
+            supabase.table("inventory").delete().in_("id", ids_to_del).execute()
+            
+            st.success(f"Successfully removed {len(to_delete)} items!")
+            st.rerun()
 else:
     st.info("Your inventory is currently empty.")
+
