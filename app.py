@@ -1,4 +1,58 @@
 import streamlit as st
+import pandas as pd
+from supabase import create_client, Client
 
-# Set the title of the app
-st.title("Streamlit Food Inventory App")
+# Initialize Supabase client
+url: str = st.secrets["SUPABASE_URL"]
+key: str = st.secrets["SUPABASE_KEY"]
+supabase: Client = create_client(url, key)
+
+st.title("🥗 Food Inventory Pro")
+
+# --- DATA FUNCTIONS ---
+def get_inventory():
+    # Fetch data from Supabase
+    response = supabase.table("inventory").select("*").execute()
+    return response.data
+
+def add_item(name, qty, cat, cal):
+    # Insert data into Supabase
+    data = {
+        "item_name": name,
+        "quantity": qty,
+        "category": cat,
+        "calories_per_unit": cal
+    }
+    supabase.table("inventory").insert(data).execute()
+    st.cache_data.clear() # Refresh data
+
+# --- UI SECTION ---
+with st.expander("➕ Add New Grocery Item"):
+    with st.form("add_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            name = st.text_input("Item Name")
+            qty = st.number_input("Quantity", min_value=1)
+        with col2:
+            cat = st.selectbox("Category", ["Produce", "Dairy", "Meat", "Pantry", "Frozen"])
+            cal = st.number_input("Calories (per unit)", min_value=0)
+        
+        if st.form_submit_button("Save to Inventory"):
+            if name:
+                add_item(name, qty, cat, cal)
+                st.success(f"Added {name}!")
+            else:
+                st.error("Please enter an item name.")
+
+# --- DISPLAY SECTION ---
+st.subheader("Current Stock")
+inventory_data = get_inventory()
+
+if inventory_data:
+    import pandas as pd
+    df = pd.DataFrame(inventory_data)
+    # Cleaning up display
+    df = df[['item_name', 'quantity', 'category', 'calories_per_unit']]
+    st.dataframe(df, use_container_width=True)
+else:
+    st.info("Your inventory is currently empty.")
