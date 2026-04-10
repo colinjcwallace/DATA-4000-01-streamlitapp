@@ -70,11 +70,8 @@ inventory_data = get_inventory()
 
 if inventory_data:
     df = pd.DataFrame(inventory_data)
-    # Cleaning up display
-    df = df[['item_name', 'quantity', 'category']]
-    st.dataframe(df, use_container_width=True)
-# 1. Create a display string for the dropdown (Name + Category)
-    # This helps if you have "Milk" in both 'Dairy' and 'Pantry'
+    display_df = df[['item_name', 'quantity', 'category']].copy()
+    st.dataframe(display_df, width="stretch")
     df['display_name'] = df['item_name'] + " (" + df['category'] + ")"
     
     # 2. Multiselect for deletion
@@ -93,6 +90,7 @@ if inventory_data:
             supabase.table("inventory").delete().in_("id", ids_to_del).execute()
             
             st.success(f"Successfully removed {len(to_delete)} items!")
+            st.cache_data.clear()
             st.rerun()
 else:
     st.info("Your inventory is currently empty.")
