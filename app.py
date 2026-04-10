@@ -1,3 +1,10 @@
+def get_supabase():
+    url: str = st.secrets["SUPABASE_URL"]
+    key: str = st.secrets["SUPABASE_KEY"]
+    return create_client(url,key)
+supabase = get_supabase()
+get_supabase()
+
 import streamlit as st
 import pandas as pd
 from supabase import create_client, Client
@@ -62,7 +69,6 @@ inventory_data = get_inventory()
 
 if inventory_data:
     df = pd.DataFrame(inventory_data)
-    # Cleaning up display
     df = df[['item_name', 'quantity', 'category']]
     st.dataframe(df, use_container_width=True)
 # 1. Create a display string for the dropdown (Name + Category)
