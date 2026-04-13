@@ -29,3 +29,11 @@ This app is intended for those who buy groceries and cook for themselves.
 - Feature 2: Recipe library.
 
 - Feature 3: Cross reference for needed ingredients for recipe. 
+
+
+Query for app for recipe instructions
+
+select step_number, step_description
+from public.recipe_instructions
+where recipe_id = 1
+order by step_number asc;

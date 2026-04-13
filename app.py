@@ -1,97 +1,64 @@
 import streamlit as st
-import pandas as pd
-from supabase import create_client, Client
+from supabase import create_client
 
-
-def get_supabase():
-    url: str = st.secrets["SUPABASE_URL"]
-    key: str = st.secrets["SUPABASE_KEY"]
-    return create_client(url,key)
-supabase = get_supabase()
-get_supabase()
-
-# Initialize Supabase client
-url: str = st.secrets["SUPABASE_URL"]
+# 1. Setup Connection
+url: str = st.secrets ["SUPABASE_URL"]
 key: str = st.secrets["SUPABASE_KEY"]
-supabase: Client = create_client(url, key)
+supabase = create_client(url, key)
 
-st.title("Food Inventory Manager")
+st.title("🍳 Fridge-to-Table Manager")
+st.write("Welcome! Select a recipe below to see if you have the ingredients in stock.")
 
-# --- DATA FUNCTIONS ---
-def get_inventory():
-    # Fetch data from Supabase
-    response = supabase.table("inventory").select("*").execute()
-    return response.data
+# 2. Select Recipe
+# In a real app, you'd fetch this list from your 'recipes' table
+recipe_query = supabase.table("recipe").select("*").execute()
+recipe_options = {r['recipe_name']: r['recipe_id'] for r in recipe_query.data}
 
-def add_item(name, qty, cat):
-    # Insert data into Supabase
-    data = {
-        "item_name": name,
-        "quantity": qty,
-        "category": cat,
-    }
-    supabase.table("inventory").insert(data).execute()
-    st.cache_data.clear() # Refresh data
+selection = st.selectbox("I want to make:", options=list(recipe_options.keys()))
 
-# --- Helper Functions ---
-def update_tags(item_id, current_tags, new_tag=None, remove_tag=None):
-    updated_tags = list(current_tags) if current_tags else []
+if selection:
+    recipe_id = recipe_options[selection]
     
-    if new_tag and new_tag not in updated_tags:
-        updated_tags.append(new_tag)
+    # 3. Fetch Data (Instructions)
+    steps = supabase.table("recipe_instructions").select("*").eq("recipe_id", recipe_id).order("step_number").execute()
     
-    if remove_tag in updated_tags:
-        updated_tags.remove(remove_tag)
-    
-    # Update Supabase
-    supabase.table("inventory").update({"tags": updated_tags}).eq("id", item_id).execute()
-    st.rerun()
+    # 4. Fetch Comparison Logic (Ingredients vs Stock)
+    # We use a RPC (Stored Function) or a specific query here
+    # For simplicity, let's fetch the ingredients and the current stock
+    ingredients = supabase.table("recipe_ingredients").select("*, item_definitions(item_name)").eq("recipe_id", recipe_id).execute()
+    stock = supabase.table("current_stock").select("*").execute()
+    stock_dict = {item['item_id']: item['total_in_fridge'] for item in stock.data}
 
+    col1, col2 = st.columns(2)
 
-# --- UI SECTION ---
-with st.expander("➕ Add New Grocery Item"):
-    with st.form("add_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            name = st.text_input("Item Name")
-            qty = st.number_input("Quantity", min_value=1)
-        with col2:
-            cat = st.selectbox("Category", ["Produce", "Dairy", "Meat", "Pantry", "Frozen"])
-        if st.form_submit_button("Save to Inventory"):
-            if name:
-                add_item(name, qty, cat)
-                st.success(f"Added {name}!")
+    with col1:
+        st.subheader("📝 Instructions")
+        for step in steps.data:
+            st.write(f"{step['step_number']}. {step['step_description']}")
+
+    with col2:
+        st.subheader("🛒 Ingredient Check")
+        
+        have = []
+        need = []
+
+        for ing in ingredients.data:
+            item_id = ing['item_id']
+            name = ing['item_definitions']['item_name']
+            required = ing['quantity_required']
+            current = stock_dict.get(item_id, 0)
+
+            if current >= required:
+                have.append(name)
             else:
-                st.error("Please enter an item name.")
+                need.append(name)
 
-# --- DISPLAY SECTION ---
-st.subheader("Current Stock")
-inventory_data = get_inventory()
+        st.write("**Already in Fridge:**")
+        if have:
+            for item in have: st.success(item)
+        else: st.info("Nothing in stock!")
 
-if inventory_data:
-    df = pd.DataFrame(inventory_data)
-    display_df = df[['item_name', 'quantity', 'category']].copy()
-    st.dataframe(display_df, width="stretch")
-    df['display_name'] = df['item_name'] + " (" + df['category'] + ")"
-    
-    # 2. Multiselect for deletion
-    to_delete = st.multiselect(
-        "Select items to remove from inventory:",
-        options=df['display_name'].tolist(),
-        help="Select one or more items to delete permanently."
-    )
-    # 3. Delete Button Logic
-    if to_delete:
-        if st.button("🗑️ Delete Selected Items", type="primary"):
-            # Find the IDs for the selected display names
-            ids_to_del = df[df['display_name'].isin(to_delete)]['id'].tolist()
-            
-            # Execute batch delete in Supabase
-            supabase.table("inventory").delete().in_("id", ids_to_del).execute()
-            
-            st.success(f"Successfully removed {len(to_delete)} items!")
-            st.cache_data.clear()
-            st.rerun()
-else:
-    st.info("Your inventory is currently empty.")
-
+        st.write("**Need to Buy:**")
+        if need:
+            for item in need: st.error(item)
+        else: st.balloons() # Success! You have everything.
