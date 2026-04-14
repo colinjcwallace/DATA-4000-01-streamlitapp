@@ -10,30 +10,56 @@ Update:
 
 Currently this app logs inventory of user's groceries in a database. Users can now delete items from inventory and will be shown in an output table. User inputs are loaded into the database system, Supabase, using an API key. 
 
+Update:
+
+I have added three seperate pages to organize the app and its functions. The first page selects the stored recipes and gives you the directions as well as what ingredients you will need and what you will need to go to the store for. The second page is your inventory manager, where you add or subtract from your inventory. This page also shows the total of each item in your inventory. The last page is your recipe manager. In this page you add your ingredients, its quantities, and the directions for that recipe. New ingredients get stored in the data dictionary in the database but not in inventory. 
+
 ## Intended Users
 
 This app is intended for those who buy groceries and cook for themselves. 
 
 ## Current Features
 
-- Feature 1: Input for user's groceries.
+- Feature 1: Selection for stored recipes.
 
-- Feature 2: Delete button for inventory. 
+- Feature 2: Output for directions of the recipe.
 
-- Feature 3: Output of current inventory. 
+- Feature 3: Output for ingredients in house and those to buy.
+
+- Feature 4: Ribbon for pages.
+
+- Feature 5: Input for add or subtract items into inventory.
+
+- Feature 6: Output of current inventory as sum of all transactions.
+
+- Feature 7: Output of transaction table.
+
+- Feature 8: Input to create a new recipe.
+
+- Feature 9: Selection box for stored recipes add new ingredients and directions
+
+- Feature 10: Tabs to differentiate adding ingredients and directions
+
+- Feature 11: Input for new ingredients
+
+- Feature 12: Input for new directions
 
 ## Planned Features
 
-- Feature 1: Shelf life indicator.
+- Feature 1: Editting feature for ingredients and directions in page 2.
 
-- Feature 2: Recipe library.
+- Feature 2: Need to add quantity to ingredient check in app page
 
-- Feature 3: Cross reference for needed ingredients for recipe. 
+- Feature 3: Add a search to Current Fridge (change name) Contents table in page 1. 
 
+## Ditched Features
 
-Query for app for recipe instructions
+- The delete button is no longer a button.
 
-select step_number, step_description
-from public.recipe_instructions
-where recipe_id = 1
-order by step_number asc;
+- I will not be doing the dietary aspect yet.
+
+- Shelf life indicator.
+
+## Challenges Faced
+
+- The biggest challenged I faced with this project is how to organize the database. I was doing this while learning how to navigate the features of Supabase. I found it easier to use SQL to create tables, their contingencies, and keys rather than using Supabase's user inputs.
