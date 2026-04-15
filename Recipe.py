@@ -16,16 +16,16 @@ recipe_options = {r['recipe_name']: r['recipe_id'] for r in recipe_query.data}
 
 selection = st.selectbox("I want to make:", options=list(recipe_options.keys()))
 
+
 if selection:
     recipe_id = recipe_options[selection]
     
-    # 3. Fetch Data (Instructions)
+    # Fetch Data
     steps = supabase.table("recipe_instructions").select("*").eq("recipe_id", recipe_id).order("step_number").execute()
     
-    # 4. Fetch Comparison Logic (Ingredients vs Stock)
-    # We use a RPC (Stored Function) or a specific query here
-    # For simplicity, let's fetch the ingredients and the current stock
+    # Ensure you are selecting the 'unit' column here
     ingredients = supabase.table("recipe_ingredients").select("*, item_definitions(item_name)").eq("recipe_id", recipe_id).execute()
+    
     stock = supabase.table("current_stock").select("*").execute()
     stock_dict = {item['item_id']: item['total_in_fridge'] for item in stock.data}
 
@@ -39,6 +39,7 @@ if selection:
     with col2:
         st.subheader("🛒 Ingredient Check")
         
+        # Lists to store the formatted strings
         have = []
         need = []
 
@@ -46,19 +47,27 @@ if selection:
             item_id = ing['item_id']
             name = ing['item_definitions']['item_name']
             required = ing['quantity_required']
+            unit = ing['unit'] # Grab the new unit column
             current = stock_dict.get(item_id, 0)
 
+            # Format the display string: "2 cups of Milk"
+            display_text = f"{required} {unit} of {name}"
+
             if current >= required:
-                have.append(name)
+                have.append(display_text)
             else:
-                need.append(name)
+                need.append(display_text)
 
         st.write("**Already in Fridge:**")
         if have:
-            for item in have: st.success(item)
-        else: st.info("Nothing in stock!")
+            for item in have: 
+                st.success(item)
+        else: 
+            st.info("Nothing in stock!")
 
         st.write("**Need to Buy:**")
         if need:
-            for item in need: st.error(item)
-        else: st.balloons() # Success! You have everything.
+            for item in need: 
+                st.error(item)
+        else: 
+            st.balloons()

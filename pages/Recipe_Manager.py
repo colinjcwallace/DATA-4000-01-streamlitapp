@@ -5,7 +5,7 @@ url: str = st.secrets["SUPABASE_URL"]
 key: str = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-st.title("📖 Recipe Book")
+st.title("📖 Recipe Manager")
 
 # --- STEP 1: CREATE NEW RECIPE ---
 st.subheader("➕ Create New Recipe")
@@ -19,7 +19,7 @@ with st.form("new_recipe_form", clear_on_submit=True):
 
 st.divider()
 
-# --- STEP 2: MANIPULATE RECIPE ---
+# --- STEP 2: MANAGE RECIPE DETAILS ---
 recipe_query = supabase.table("recipe").select("*").execute()
 if recipe_query.data:
     recipe_list = {r['recipe_name']: r['recipe_id'] for r in recipe_query.data}
@@ -33,15 +33,25 @@ if recipe_query.data:
         item_defs = item_query.data
         
         with st.form("add_ing_form", clear_on_submit=True):
-            ing_input = st.text_input("Ingredient Name")
-            ing_cat = st.selectbox("Category (If new)", ["Pantry", "Dairy", "Produce", "Meat", "Frozen", "Other"])
-            ing_qty = st.number_input("Quantity Required", min_value=1, step=1)
+            st.write(f"Add ingredients to **{selected_r_name}**")
+            ing_input = st.text_input("Ingredient Name (e.g., Flour, Milk)")
             
-            if st.form_submit_button("Add to Recipe"):
+            # Layout for Quantity and Unit
+            col_q, col_u = st.columns([1, 2])
+            with col_q:
+                ing_qty = st.number_input("Qty", min_value=1, step=1)
+            with col_u:
+                # New Input for Units
+                ing_unit = st.text_input("Unit (e.g., cups, grams, large, tbsp)", value="unit")
+            
+            ing_cat = st.selectbox("Category (If new)", ["Pantry", "Dairy", "Produce", "Meat", "Frozen", "Other"])
+            
+            if st.form_submit_button("Add Ingredient"):
                 if ing_input:
                     clean_name = ing_input.strip().title()
                     existing_item = next((i for i in item_defs if i['item_name'] == clean_name), None)
                     
+                    # 1. Register item if it doesn't exist
                     if not existing_item:
                         new_def = supabase.table("item_definitions").insert({
                             "item_name": clean_name, 
@@ -51,26 +61,25 @@ if recipe_query.data:
                     else:
                         item_id = existing_item['item_id']
 
+                    # 2. Upsert into recipe_ingredients WITH the unit
                     supabase.table("recipe_ingredients").upsert({
                         "recipe_id": recipe_id,
                         "item_id": item_id,
-                        "quantity_required": ing_qty
+                        "quantity_required": ing_qty,
+                        "unit": ing_unit.strip().lower() # Standardize units to lowercase
                     }).execute()
+                    st.success(f"Added {ing_qty} {ing_unit} of {clean_name}")
                     st.rerun()
 
     with tab2:
-        # --- BACKGROUND AUTO-STEP LOGIC ---
-        # User sees nothing, but we calculate the number here
+        # Background auto-step logic
         existing_steps = supabase.table("recipe_instructions").select("step_number").eq("recipe_id", recipe_id).execute()
         next_step = max([s['step_number'] for s in existing_steps.data]) + 1 if existing_steps.data else 1
 
         with st.form("add_step_form", clear_on_submit=True):
-            # Only the description input is visible
-            step_desc = st.text_area("Type the next instruction here:")
-            
+            step_desc = st.text_area("Type the next instruction:")
             if st.form_submit_button("Add Instruction"):
                 if step_desc:
-                    # Database gets the 'next_step' calculated above
                     supabase.table("recipe_instructions").insert({
                         "recipe_id": recipe_id,
                         "step_number": next_step,
@@ -87,7 +96,8 @@ if recipe_query.data:
         st.write("**Ingredients**")
         ings = supabase.table("recipe_ingredients").select("*, item_definitions(item_name)").eq("recipe_id", recipe_id).execute()
         for i in ings.data:
-            st.write(f"• {i['item_definitions']['item_name']} ({i['quantity_required']})")
+            # Updated to show the unit next to the quantity
+            st.write(f"• {i['item_definitions']['item_name']}: {i['quantity_required']} {i['unit']}")
             
     with col_b:
         st.write("**Instructions**")
