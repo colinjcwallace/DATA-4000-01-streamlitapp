@@ -60,6 +60,16 @@ This app is intended for those who buy groceries and cook for themselves.
 
 - Shelf life indicator.
 
+## To Do List
+
+- Create more user friendly with inputs. Have not checked errors in user input.
+
+- View transaction history table in page 1 should be a head so millions of entries will not show in long-term use. Or just delete feature as it is not critical.
+
+- Change names of pages
+
+- Make it look nice
+
 ## Challenges Faced
 
 - The biggest challenged I faced with this project is how to organize the database. I was doing this while learning how to navigate the features of Supabase. I found it easier to use SQL to create tables, their contingencies, and keys rather than using Supabase's user inputs.
